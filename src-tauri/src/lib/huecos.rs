@@ -3,7 +3,7 @@ use statrs::distribution::{ChiSquared, Continuous};
 use std::collections::BTreeMap;
 
 #[derive(Serialize, Deserialize, Debug)]
-struct ResponseTable {
+pub struct ResponseTable {
     frecuencia_observada: BTreeMap<usize, i128>,
     frecuencia_esperada: BTreeMap<usize, f64>,
     estadistico: BTreeMap<usize, f64>,

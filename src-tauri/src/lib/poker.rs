@@ -3,15 +3,15 @@ use statrs::distribution::ChiSquared;
 use statrs::distribution::Continuous;
 use std::collections::{BTreeMap, HashMap};
 #[derive(Serialize, Deserialize, Debug)]
-struct ResponseTable {
-    frecuencia_observada: BTreeMap<PokerTable, i64>,
+pub struct ResponseTable {
+    frecuencia_observada: BTreeMap<PokerTable, i128>,
     frecuencia_esperada: BTreeMap<PokerTable, f64>,
-    estadistico: BTreeMap<PokerTable, f64>,
+    estadistico: BTreeMap<usize, f64>,
     total_estadistico: f64,
     total_estadistico_tabla: f64,
 }
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, PartialOrd, Eq, Ord)]
+#[derive(Serialize, Clone, Deserialize, Debug, PartialEq, PartialOrd, Eq, Ord)]
 enum PokerTable {
     TD,
     P1,
@@ -32,6 +32,11 @@ impl std::fmt::Display for PokerTable {
             Self::P => write!(f, "P"),
             Self::Q => write!(f, "Q"),
         }
+    }
+}
+impl PokerTable {
+    fn new() -> Self {
+        Self::TD
     }
 }
 
@@ -91,7 +96,7 @@ impl Poker5Decimales {
 }
 #[tauri::command(rename_all = "snake_case")]
 pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> ResponseTable {
-    let poker_table: PokerTable;
+    // let poker_table: PokerTable;
     let poker_3_decimales = Poker3Decimales::new();
     let poker_4_decimales = Poker4Decimales::new();
     let poker_5_decimales = Poker5Decimales::new();
@@ -100,10 +105,10 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
     let data_poker: BTreeMap<usize, PokerTable> = data
         .iter()
         .map(|(&key, &value)| {
-            let poker_table: PokerTable;
+            let mut poker_table: PokerTable = PokerTable::new();
             let truncated_value = (value * multiplier).trunc() / multiplier;
 
-            let truncated_value_str = truncated_value
+            let mut truncated_value_str = truncated_value
                 .to_string()
                 .trim_start_matches("0.")
                 .to_string();
@@ -111,11 +116,11 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
                 let zeros_to_add = cifras as usize - truncated_value_str.len();
                 truncated_value_str.push_str(&"0".repeat(zeros_to_add));
             }
-            let max_repeated_value = HashMap::new();
+            let mut max_repeated_value = HashMap::new();
             for c in truncated_value_str.chars() {
                 *max_repeated_value.entry(c).or_insert(0) += 1;
             }
-            let ordered_max_repeated: Vec<(&char, &i128)> = max_repeated_value.iter().collect();
+            let mut ordered_max_repeated: Vec<(&char, &i128)> = max_repeated_value.iter().collect();
             ordered_max_repeated.sort_by(|a, b| b.1.cmp(a.1));
             // let repeated_value = max_repeated_value.iter().max().unwrap().1 as i32;
             if cifras == 3 {
@@ -123,6 +128,7 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
                     1 => poker_table = PokerTable::TD,
                     2 => poker_table = PokerTable::P1,
                     3 => poker_table = PokerTable::T,
+                    _ => poker_table = PokerTable::T,
                 };
             } else if cifras == 4 {
                 match *ordered_max_repeated[0].1 {
@@ -136,6 +142,7 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
                     }
                     3 => poker_table = PokerTable::T,
                     4 => poker_table = PokerTable::P,
+                    _ => poker_table = PokerTable::P,
                 }
             } else if cifras == 5 {
                 match *ordered_max_repeated[0].1 {
@@ -156,15 +163,19 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
                     }
                     4 => poker_table = PokerTable::P,
                     5 => poker_table = PokerTable::Q,
+                    _ => poker_table = PokerTable::Q,
                 }
             }
 
             (key, poker_table)
         })
         .collect();
-    let frecuencia_observada: BTreeMap<PokerTable, i128> = BTreeMap::new();
-    for (&key, &value) in data_poker.iter() {
-        frecuencia_observada.insert(value, frecuencia_observada.get(&value).unwrap_or(&0) + 1);
+    let mut frecuencia_observada: BTreeMap<PokerTable, i128> = BTreeMap::new();
+    for (&_key, value) in data_poker.iter() {
+        frecuencia_observada.insert(
+            value.clone(),
+            frecuencia_observada.get(&value).unwrap_or(&0) + 1,
+        );
         // frecuencia_observada.insert(
         //     key,
         //     frecuencia_observada.contains_key(&key).unwrap_or(&0) + 1,
@@ -173,8 +184,8 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
     let n: i128 = data.len() as i128 + 1;
     let frecuencia_esperada: BTreeMap<PokerTable, f64> = frecuencia_observada
         .iter()
-        .map(|(&key, &value)| {
-            let frec_esp: f64;
+        .map(|(key, _value)| {
+            let mut frec_esp: f64 = 0.0;
 
             if cifras == 3 {
                 frec_esp = match key {
@@ -206,25 +217,33 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
                 } as f64
                     * n as f64;
             }
-            (key, frec_esp)
+            (key.clone(), frec_esp)
         })
         .collect();
-    let total_estadistico: f64 = 0.0;
-    let estadistico: BTreeMap<usize, f64> = (0..frecuencia_observada.len())
-        .map(|i| {
-            let frec_esperada = frecuencia_esperada.[i].unwrap().1;
-            let frec_observada = frecuencia_observada.[i].unwrap().1;
-            if let (Some(&esperada), Some(&observada)) = (frec_esperada, frec_observada) {
-                if esperada != 0.0 {
-                    let est: f64 = (esperada - observada).powf(2.0) / esperada;
-                    total_estadistico += est;
-                    Some((i, est))
-                } else {
-                    None
-                }
-            } else {
-                None
-            }
+    let mut total_estadistico: f64 = 0.0;
+    let mut key_estadistico: usize = 0;
+    let estadistico: BTreeMap<usize, f64> = frecuencia_observada
+        .iter()
+        .map(|(key, _value)| {
+            let frec_esperada = frecuencia_esperada.get(&key).unwrap();
+            let frec_observada = frecuencia_observada.get(&key).unwrap();
+
+            let est: f64 = (frec_esperada - *frec_observada as f64).powf(2.0) / frec_esperada;
+            total_estadistico += est;
+            key_estadistico += 1;
+            (key_estadistico - 1, est)
+
+            // match (frec_esperada, frec_observada) {
+            //     (Some(&esperada), Some(&observada)) => {
+            //         if esperada != 0.0 {
+            //             let est: f64 = (esperada - observada as f64).powf(2.0) / esperada;
+            //             total_estadistico += est;
+            //             Some((key, est))
+            //         } else {
+            //             None
+            //         }
+            //     } // _ => None,
+            // }
         })
         .collect();
     let grados_libertad = if cifras == 3 {
@@ -238,7 +257,7 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
     };
     let chi_square = ChiSquared::new(grados_libertad as f64).unwrap();
 
-    let total_estadistico_tabla = chi_square.pdf(1 - nivel_confianza);
+    let total_estadistico_tabla = chi_square.pdf(1_f64 - nivel_confianza);
     ResponseTable {
         frecuencia_observada,
         frecuencia_esperada,

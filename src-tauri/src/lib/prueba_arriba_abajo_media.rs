@@ -1,45 +1,68 @@
 use std::collections::BTreeMap;
 
-use rug::{ops::Pow, Float, Integer};
-use statrs::distribution::Normal;
+use serde::{Deserialize, Serialize};
+use statrs::distribution::{ContinuousCDF, Normal};
 
-struct ResponseTable {
-    mu: Float,
-    gamma_value: Float,
-    estadistico: Float,
-    estadistico_tabla_s: Float,
-    estadistico_tabla_i: Float,
-    corridas: Integer,
+#[derive(Serialize, Deserialize, Debug, PartialOrd, PartialEq)]
+pub struct ResponseTable {
+    mu: f64,
+    gamma_value: f64,
+    estadistico: f64,
+    estadistico_tabla_s: f64,
+    estadistico_tabla_i: f64,
+    corridas: i64,
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub fn prueba_arriba_abajo_media(data: BTreeMap<usize, Float>, nivel_confianza: f64) {
-    let data_sequence: BTreeMap<usize, Float> = (0..data.len())
-        .map(|i| if data[&i] >= 0.5 { (i, 1) } else { (i, 0) })
+pub fn prueba_arriba_abajo_media(
+    data: BTreeMap<usize, f64>,
+    nivel_confianza: f64,
+) -> ResponseTable {
+    let data_sequence: BTreeMap<usize, bool> = (0..data.len())
+        .map(|i| {
+            if *data.get(&i).unwrap() >= 0.5 {
+                (i, true)
+            } else {
+                (i, false)
+            }
+        })
         .collect();
-    let corridas: Integer = 1;
-    let n0: Float = if (data_sequence[&0] == 0) { 1 } else { 0 };
-    let n1: Float = if (data_sequence[&0] == 1) { 1 } else { 0 };
+    let mut corridas: i64 = 1;
+
+    let mut n0: i64 = if data_sequence.get(&0).is_some() && *data_sequence.get(&0).unwrap() == false
+    {
+        1
+    } else {
+        0
+    };
+    let mut n1: i64 = if data_sequence.get(&0).is_some() && *data_sequence.get(&0).unwrap() == true
+    {
+        1
+    } else {
+        0
+    };
+
     for i in 1..data_sequence.len() {
-        if data_sequence[&i] != data_sequence[&i - 1] {
+        if data_sequence[&i] != data_sequence[&(i - 1)] {
             corridas += 1;
         }
-        if data_sequence[&i] == 1 {
+        if data_sequence[&i] == true {
             n1 += 1;
-        } else if data_sequence[&i] == 0 {
+        } else if data_sequence[&i] == false {
             n0 += 1
         }
     }
 
-    let n: Integer = data.len();
-    let mu: Float = (2 * n0 * n1 / n) - 0.5;
-    let gamma_value: Float = (2 * n0 * n1 * (2 * n0 * n1 - n)) / (n.pow(2) * (n - 1));
-    let estadistico: Float = (corridas - mu) / gamma_value.pow(0.5);
+    let n: i64 = data.len() as i64;
+    let mu: f64 = (2 * n0 * n1 / n) as f64 - 0.5;
+    let gamma_value: f64 =
+        (2 * n0 * n1 * (2 * n0 * n1 - n)) as f64 / ((n.pow(2)) as f64 * (n - 1) as f64);
+    let estadistico: f64 = (corridas as f64 - mu) / gamma_value.powf(0.5);
 
     let normal = Normal::new(0.0, 1.0).unwrap();
-    let alpha = (1.0 - nivel_confianza);
-    let estadistico_tabla_s: Float = normal.inverse_cdf(alpha / 2.0);
-    let estadistico_tabla_i: Float = -1.0 * normal.inverse_cdf(alpha / 2.0);
+    let alpha = 1.0 - nivel_confianza;
+    let estadistico_tabla_s: f64 = normal.inverse_cdf(alpha / 2.0);
+    let estadistico_tabla_i: f64 = -1.0 * normal.inverse_cdf(alpha / 2.0);
 
     ResponseTable {
         mu,
