@@ -21,7 +21,9 @@ const config = {
 		// 4. Append the Skeleton plugin (after other plugins)
 
 		skeleton({
-			themes: { preset: ['rocket'] }
+			themes: {
+				preset: ['rocket', { name: 'skeleton', enhancements: true }]
+			}
 		})
 	]
 } satisfies Config;

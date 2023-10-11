@@ -1,63 +1,61 @@
 <script lang="ts">
-	import { AppRail, AppRailTile, AppRailAnchor } from '@skeletonlabs/skeleton';
+	import { TabGroup, Tab } from '@skeletonlabs/skeleton';
+	import '@fortawesome/fontawesome-free/js/all.js';
+	import '@fortawesome/fontawesome-free/css/all.css';
+	import PruebaHuecos from './PruebaHuecos.svelte';
+	import PruebaArribaAbajo from './PruebaArribaAbajo.svelte';
+	import PruebaArribaAbajoMedia from './PruebaArribaAbajoMedia.svelte';
+	import PruebaSeries from './PruebaSeries.svelte';
 
-	let selectedOption = '';
+	export let csv_string: string;
 
-	const handleOptionSelect = (event: Event) => {
-		const select = event.target as HTMLSelectElement;
-		selectedOption = select.value;
-		// Handle the selected option here
-		console.log(selectedOption);
-	};
-	let currentTitle = 0;
+	let tabSet: Number = 0;
 </script>
 
-<div>
-	<AppRail>
-		<svelte:fragment slot="lead">
-			<AppRailAnchor href="/">(icon)</AppRailAnchor>
-		</svelte:fragment>
-		<AppRailTile bind:group={currentTitle} name="title-1" value="0" title="title-2">
-			<AppRailAnchor href="#" on:click|preventDefault={handleOptionSelect}>
-				Select an option
-			</AppRailAnchor>
-		</AppRailTile>
-		<AppRailTile>
-			<AppRailAnchor
-				href="/prueba_huecos"
-				on:click|preventDefault={handleOptionSelect}
-				value="Prueba de Huecos"
-			>
-				Prueba de Huecos
-			</AppRailAnchor>
-		</AppRailTile>
-		<AppRailTile>
-			<AppRailAnchor href="#" on:click|preventDefault={handleOptionSelect} value="Prueba de Pocker">
-				Prueba de Pocker
-			</AppRailAnchor>
-		</AppRailTile>
-		<AppRailTile>
-			<AppRailAnchor
-				href="#"
-				on:click|preventDefault={handleOptionSelect}
-				value="Prueba arriba abajo"
-			>
-				Prueba arriba abajo
-			</AppRailAnchor>
-		</AppRailTile>
-		<AppRailTile>
-			<AppRailAnchor
-				href="#"
-				on:click|preventDefault={handleOptionSelect}
-				value="Prueba arriba abajo de medias"
-			>
-				Prueba arriba abajo de medias
-			</AppRailAnchor>
-		</AppRailTile>
-		<AppRailTile>
-			<AppRailAnchor href="#" on:click|preventDefault={handleOptionSelect} value="Prueba de Series">
-				Prueba de Series
-			</AppRailAnchor>
-		</AppRailTile>
-	</AppRail>
-</div>
+<TabGroup
+	justify="justify-center"
+	active="variant-filled-primary"
+	hover="hover:variant-soft-primary"
+	flex="flex-1 lg:flex-none"
+	rounded=""
+	border=""
+	class="w-full bg-surface-100-800-token"
+>
+	<Tab bind:group={tabSet} name="prueba_huecos" value={0}>
+		<!-- <svelte:fragment slot="lead">fas fa-home</svelte:fragment> -->
+		<i slot="lead" class="text-base fas fa-flask" />
+		<span>Prueba de Huecos</span>
+	</Tab>
+	<Tab bind:group={tabSet} name="prueba_poker" value={1}>
+		<i slot="lead" class="text-base fas fa-play-card" />
+		<span>Prueba de Poker</span>
+	</Tab>
+	<Tab bind:group={tabSet} name="prueba_arriba_abajo" value={2}>
+		<i slot="lead" class="text-base fas fa-arrows-alt-v" />
+		<span>Prueba de Arriba y Abajo</span>
+	</Tab>
+	<Tab bind:group={tabSet} name="prueba_arriba_abajo_media" value={3}>
+		<i slot="lead" class="text-base fas fa-chart-line" />
+		<span>Prueba de Arriba y Abajo Media</span>
+	</Tab>
+	<Tab bind:group={tabSet} name="prueba_series" value={4}>
+		<i slot="lead" class="text-base fas fa-list-ol" />
+		<span>Prueba de Series</span>
+	</Tab>
+	<!-- Tab Panels --->
+	<svelte:fragment slot="panel">
+		{#key tabSet}
+			{#if tabSet === 0}
+				<PruebaHuecos {csv_string} />
+			{:else if tabSet === 1}
+				(tab panel 2 contents)
+			{:else if tabSet === 2}
+				<PruebaArribaAbajo {csv_string} />
+			{:else if tabSet === 3}
+				<PruebaArribaAbajoMedia {csv_string} />
+			{:else if tabSet === 4}
+				<PruebaSeries {csv_string} />
+			{/if}
+		{/key}
+	</svelte:fragment>
+</TabGroup>

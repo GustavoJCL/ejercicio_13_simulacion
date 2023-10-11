@@ -1,7 +1,10 @@
 use serde::{Deserialize, Serialize};
 use statrs::distribution::ChiSquared;
 use statrs::distribution::Continuous;
+use statrs::distribution::ContinuousCDF;
 use std::collections::{BTreeMap, HashMap};
+
+use super::csv_to_btreemap::csv_to_data;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct ResponseTable {
     frecuencia_observada: BTreeMap<PokerTable, i128>,
@@ -9,6 +12,7 @@ pub struct ResponseTable {
     estadistico: BTreeMap<usize, f64>,
     total_estadistico: f64,
     total_estadistico_tabla: f64,
+    chi_square_values: BTreeMap<usize, (f64, f64)>,
 }
 
 #[derive(Serialize, Clone, Deserialize, Debug, PartialEq, PartialOrd, Eq, Ord)]
@@ -95,8 +99,10 @@ impl Poker5Decimales {
     }
 }
 #[tauri::command(rename_all = "snake_case")]
-pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> ResponseTable {
+pub fn poker(data_string: String, nivel_confianza: f64, cifras: i32) -> ResponseTable {
     // let poker_table: PokerTable;
+    let data: BTreeMap<usize, f64> = csv_to_data(data_string);
+
     let poker_3_decimales = Poker3Decimales::new();
     let poker_4_decimales = Poker4Decimales::new();
     let poker_5_decimales = Poker5Decimales::new();
@@ -255,50 +261,30 @@ pub fn poker(data: BTreeMap<usize, f64>, nivel_confianza: f64, cifras: i32) -> R
     } else {
         0
     };
-    let chi_square = ChiSquared::new(grados_libertad as f64).unwrap();
-
-    let total_estadistico_tabla = chi_square.pdf(1_f64 - nivel_confianza);
+    let mut total_estadistico_tabla = 0.0;
+    let mut chi_square_values: BTreeMap<usize, (f64, f64)> = BTreeMap::new();
+    if grados_libertad > 0 {
+        let chi_square = ChiSquared::new(grados_libertad as f64).unwrap();
+        total_estadistico_tabla = chi_square.inverse_cdf(nivel_confianza);
+        chi_square_values = {
+            let mut i = 0.0001;
+            let mut count: usize = 0;
+            let mut chi_inv_value: BTreeMap<usize, (f64, f64)> = BTreeMap::new();
+            while i < nivel_confianza * 1.25 {
+                let inv_cdf = chi_square.inverse_cdf(i);
+                chi_inv_value.insert(count, (i, inv_cdf));
+                count += 1;
+                i += 0.01;
+            }
+            chi_inv_value
+        };
+    }
     ResponseTable {
         frecuencia_observada,
         frecuencia_esperada,
         estadistico,
         total_estadistico,
         total_estadistico_tabla,
+        chi_square_values,
     }
 }
-
-// use std::cmp::Ordering;
-// trait Ord {
-//     fn cmp(&self, other: &Self) -> Ordering;
-// }
-//
-// impl Ord for f64 {
-//     fn cmp(&self, other: &Self) -> Ordering {
-//         self.partial_cmp(other).unwrap_or(Ordering::Equal)
-//     }
-// }
-// trait PartialOrd {
-//     fn partial_cmp(&self, other: &Self) -> Option<Ordering>;
-// }
-//
-// impl PartialOrd for f64 {
-//     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-//         self.partial_cmp(other)
-//     }
-// }
-//
-// trait Eq {
-//     fn eq(&self, other: &Self) -> bool;
-// }
-//
-// impl Eq for f64 {
-//     fn eq(&self, other: &Self) -> bool {}
-// }
-// trait PartialEq {
-//     fn eq(&self, other: &Self) -> bool;
-// }
-// impl PartialEq for f64 {
-//     fn eq(&self, other: &Self) -> bool {
-//         self.partial_cmp(other) == Some(Ordering::Equal)
-//     }
-// }
