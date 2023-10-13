@@ -1,28 +1,29 @@
-# create-svelte
+# create-svelte tauri
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+Everything you need to build a SvelteKit Tuari project, powered by [`create-svelte`]([https://github.com/sveltejs/kit/tree/master/packages/create-svelte](https://tauri.app/v1/guides/getting-started/setup/sveltekit)).
+(https://tauri.app/v1/guides/getting-started/setup/sveltekit/)
+
+## Download Latest Release
+
+You can download the latest release of `create-svelte tauri` from the [releases page (Download)](https://github.com/GustavoJCL/ejercicio_13_simulacion/releases/latest).
+
+[Download the csv File](https://github.com/GustavoJCL/ejercicio_13_simulacion/blob/master/csv_data.csv%20-%20Hoja%201.csv)
 
 ## Creating a project
 
 If you're seeing this, you've probably already done this step. Congrats!
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+## Prerequisites
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
+- Rust (https://www.rust-lang.org/)
+- Pnpm (https://pnpm.io/)
 
 ## Developing
 
 Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
 
 ```bash
-npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
+pnpm tauri dev
 ```
 
 ## Building
@@ -30,7 +31,7 @@ npm run dev -- --open
 To create a production version of your app:
 
 ```bash
-npm run build
+pnpm tauri build
 ```
 
 You can preview the production build with `npm run preview`.
